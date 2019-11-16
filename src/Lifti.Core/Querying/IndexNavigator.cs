@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 
@@ -76,7 +76,7 @@ namespace Lifti.Querying
                 }
             }
 
-            return new IntermediateQueryResult(matches.Select(m => new QueryWordMatch(m.Key, MergeItemMatches(m.Value))));
+            return new IntermediateQueryResult(matches.Select(m => new QueryWordMatch(m.Key, this.MergeItemMatches(m.Value))));
         }
 
         public bool Process(ReadOnlySpan<char> text)
@@ -167,7 +167,7 @@ namespace Lifti.Querying
                 foreach (var childNode in node.ChildNodes)
                 {
                     this.navigatedWith.Append(childNode.Key);
-                    foreach (var result in EnumerateIndexedWords(childNode.Value))
+                    foreach (var result in this.EnumerateIndexedWords(childNode.Value))
                     {
                         yield return result;
                     }
@@ -190,7 +190,7 @@ namespace Lifti.Querying
                     m.SelectMany(w => w.Locations).OrderBy(w => w.MinWordIndex).ToList()));
         }
 
-        private static QueryWordMatch CreateQueryWordMatch(KeyValuePair<int, List<IndexedWord>> match)
+        private static QueryWordMatch CreateQueryWordMatch(KeyValuePair<int, ImmutableList<IndexedWord>> match)
         {
             return new QueryWordMatch(match.Key, match.Value.Select(v => new FieldMatch(v)));
         }

@@ -207,10 +207,11 @@ namespace Lifti.Tokenization.Stemming
                                 .AccentInsensitive(false)))
                 .Build();
 
-            foreach (var replacement in replacements)
-            {
-                index.Add(replacement);
-            }
+            index.AddRange(replacements);
+            //foreach (var replacement in replacements)
+            //{
+            //    index.Add(replacement);
+            //}
 
             return index;
         }

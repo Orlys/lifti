@@ -94,6 +94,30 @@ namespace Lifti.Tests
         }
 
         [Fact]
+        public void IndexingIndividuallyShouldResultInSameIndexStructureWhenIndexedAsRange()
+        {
+            var words = new[]
+            {
+                "ITIVI",
+                "ILSOU",
+                "ILBA",
+                "ILB"
+            };
+
+            var builder = new FullTextIndexBuilder<string>().WithItemTokenization<string>(o => o.WithKey(s => s).WithField("Text", s => s));
+            var indexSingle = builder.Build();
+            var indexRange = builder.Build();
+
+            indexRange.AddRange(words);
+            foreach (var word in words)
+            {
+                indexSingle.Add(word);
+            }
+
+            indexSingle.ToString().Should().Be(indexRange.ToString());
+        }
+
+        [Fact]
         public void WordsRetrievedBySearchingForTextIndexedByObjectsShouldBeAssociatedToCorrectFields()
         {
             this.WithIndexedSingleStringPropertyObjects();
@@ -181,6 +205,41 @@ namespace Lifti.Tests
             this.index.Remove(wikipediaTests[10].name);
             this.index.Remove(wikipediaTests[9].name);
             this.index.Remove(wikipediaTests[8].name);
+        }
+
+        [Fact]
+        public void ConvertingIndexToString_ShouldReturnNodeStructureFormattedAsText()
+        {
+            this.WithIndexedSingleStringPropertyObjects();
+            this.index.ToString().Should().Be(@"
+  T 
+    e 
+      x 
+        t  [1 matche(s)]
+    E 
+      X 
+        T  [1 matche(s)]
+    W 
+      O  [2 matche(s)]
+    H 
+      R 
+        E E [2 matche(s)]
+  O 
+    n 
+      e  [2 matche(s)]
+  D 
+    R 
+      U 
+        M  [1 matche(s)]
+  N 
+    o 
+      t  [1 matche(s)]
+    O 
+      T  [1 matche(s)]
+  S 
+    U 
+      M 
+        M ER [1 matche(s)]");
         }
 
         private void WithIndexedSingleStringPropertyObjects()

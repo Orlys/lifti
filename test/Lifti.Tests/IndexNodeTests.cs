@@ -10,9 +10,8 @@ namespace Lifti.Tests
 {
     public class IndexNodeTests
     {
-        private readonly Mock<IIndexNodeFactory> indexNodeFactoryMock;
+        private readonly IndexNodeFactory indexNodeFactory;
         private readonly IndexNode sut;
-        private readonly List<IndexNode> createdChildNodes = new List<IndexNode>();
         private readonly IndexedWord locations1 = CreateLocations(0, (0, 1, 2), (1, 5, 8));
         private readonly IndexedWord locations2 = CreateLocations(0, (2, 9, 2));
         private readonly IndexedWord locations3 = CreateLocations(0, (3, 14, 5));
@@ -25,16 +24,8 @@ namespace Lifti.Tests
 
         public IndexNodeTests()
         {
-            this.indexNodeFactoryMock = new Mock<IIndexNodeFactory>();
-            this.sut = new IndexNode(this.indexNodeFactoryMock.Object, 0, IndexSupportLevelKind.IntraNodeText);
-            this.indexNodeFactoryMock.Setup(
-                x => x.CreateNode(It.IsAny<IndexNode>()))
-                    .Returns((IndexNode parent) =>
-                    {
-                        var node = new IndexNode(this.indexNodeFactoryMock.Object, parent.Depth + 1, IndexSupportLevelKind.IntraNodeText);
-                        this.createdChildNodes.Add(node);
-                        return node;
-                    });
+            this.indexNodeFactory = new IndexNodeFactory();
+            this.sut = this.indexNodeFactory.CreateEmptyNode();
         }
 
         [Fact]
@@ -122,8 +113,6 @@ namespace Lifti.Tests
             this.sut.Index(item1, fieldId1, new Token("NOITAZI", this.locations1.Locations));
             this.sut.Index(item2, fieldId1, new Token("NOITA", this.locations2.Locations));
 
-            this.createdChildNodes.Should().HaveCount(1);
-
             VerifyResult(this.sut, "NOITA", new[] { (item2, this.locations2) }, expectedChildNodes: new[] { 'Z' });
             VerifyResult(this.sut, new[] { 'Z' }, "I", new[] { (item1, this.locations1) });
         }
@@ -146,8 +135,6 @@ namespace Lifti.Tests
         {
             this.sut.Index(item1, fieldId1, new Token("www", this.locations1.Locations));
             this.sut.Index(item1, fieldId1, new Token("wwwww", this.locations2.Locations));
-
-            this.createdChildNodes.Should().HaveCount(1);
 
             this.sut.Remove(item1);
 

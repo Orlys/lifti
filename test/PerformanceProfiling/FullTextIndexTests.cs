@@ -65,19 +65,19 @@ namespace PerformanceProfiling
     [RankColumn, MemoryDiagnoser]
     public class FullTextIndexTests : IndexBenchmarkBase
     {
-        //[Benchmark()]
-        //public void NewCodeIndexingAlwaysSupportIntraNodeText()
-        //{
-        //    var index = CreateNewIndex(-1);
-        //    this.PopulateIndex(index);
-        //}
+        [Benchmark()]
+        public void NewCodeIndexingAlwaysSupportIntraNodeText()
+        {
+            var index = CreateNewIndex(-1);
+            this.PopulateIndex(index);
+        }
 
-        //[Benchmark()]
-        //public void NewCodeIndexingAlwaysIndexCharByChar()
-        //{
-        //    var index = CreateNewIndex(1000);
-        //    this.PopulateIndex(index);
-        //}
+        [Benchmark()]
+        public void NewCodeIndexingAlwaysIndexCharByChar()
+        {
+            var index = CreateNewIndex(1000);
+            this.PopulateIndex(index);
+        }
 
         [Benchmark()]
         public void NewCodeIndexingIntraNodeTextAt4Characters()
@@ -86,12 +86,12 @@ namespace PerformanceProfiling
             this.PopulateIndex(index);
         }
 
-        //[Benchmark()]
-        //public void NewCodeIndexingIntraNodeTextAt2Characters()
-        //{
-        //    var index = CreateNewIndex(2);
-        //    this.PopulateIndex(index);
-        //}
+        [Benchmark()]
+        public void NewCodeIndexingIntraNodeTextAt2Characters()
+        {
+            var index = CreateNewIndex(2);
+            this.PopulateIndex(index);
+        }
 
         [Benchmark()]
         public void LegacyCodeIndexing()

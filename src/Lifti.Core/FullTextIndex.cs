@@ -9,7 +9,6 @@ namespace Lifti
 {
     public class FullTextIndex<TKey> : IFullTextIndex<TKey>
     {
-        private readonly IIndexNodeFactory indexNodeFactory;
         private readonly ITokenizerFactory tokenizerFactory;
         private readonly IQueryParser queryParser;
         private readonly TokenizationOptions defaultTokenizationOptions;
@@ -24,7 +23,7 @@ namespace Lifti
             TokenizationOptions defaultTokenizationOptions)
         {
             this.itemTokenizationOptions = itemTokenizationOptions ?? throw new ArgumentNullException(nameof(itemTokenizationOptions));
-            this.indexNodeFactory = indexNodeFactory ?? throw new ArgumentNullException(nameof(indexNodeFactory));
+            this.IndexNodeFactory = indexNodeFactory ?? throw new ArgumentNullException(nameof(indexNodeFactory));
             this.tokenizerFactory = tokenizerFactory ?? throw new ArgumentNullException(nameof(tokenizerFactory));
             this.queryParser = queryParser ?? throw new ArgumentNullException(nameof(queryParser));
             this.defaultTokenizationOptions = defaultTokenizationOptions ?? throw new ArgumentNullException(nameof(defaultTokenizationOptions));
@@ -35,10 +34,11 @@ namespace Lifti
                 tokenizerFactory, 
                 defaultTokenizationOptions);
 
-            this.Root = this.indexNodeFactory.CreateNode();
+            this.Root = this.IndexNodeFactory.CreateEmptyNode();
         }
 
-        internal IndexNode Root { get; }
+        internal IIndexNodeFactory IndexNodeFactory { get; }
+        internal IndexNode Root { get; set; }
 
         public IIdLookup<TKey> IdLookup => this.idPool;
 
@@ -69,10 +69,13 @@ namespace Lifti
             var itemId = this.idPool.Add(itemKey);
 
             var tokenizer = this.GetTokenizer(tokenizationOptions);
+            var newRoot = this.IndexNodeFactory.CloneNode(this.Root);
             foreach (var word in tokenizer.Process(text))
             {
-                this.Root.Index(itemId, this.FieldLookup.DefaultField, word);
+                newRoot.Index(itemId, this.FieldLookup.DefaultField, word);
             }
+
+            this.Root = newRoot;
         }
 
         public void AddRange<TItem>(IEnumerable<TItem> items)
@@ -82,29 +85,18 @@ namespace Lifti
                 throw new ArgumentNullException(nameof(items));
             }
 
-            foreach (var item in items)
+            this.ReplaceRoot(r =>
             {
-                this.Add(item);
-            }
+                foreach (var item in items)
+                {
+                    this.Add(r, item);
+                }
+            });
         }
 
         public void Add<TItem>(TItem item)
         {
-            var options = this.itemTokenizationOptions.Get<TItem>();
-
-            var itemKey = options.KeyReader(item);
-            var itemId = this.idPool.Add(itemKey);
-
-            foreach (var field in options.FieldTokenization)
-            {
-                var (fieldId, tokenizer) = this.FieldLookup.GetFieldInfo(field.Name);
-                var tokens = field.Tokenize(tokenizer, item);
-
-                foreach (var word in tokens)
-                {
-                    this.Root.Index(itemId, fieldId, word);
-                }
-            }
+            this.ReplaceRoot(r => this.Add(r, item));
         }
 
         public async ValueTask AddRangeAsync<TItem>(IEnumerable<TItem> items)
@@ -114,29 +106,19 @@ namespace Lifti
                 throw new ArgumentNullException(nameof(items));
             }
 
-            foreach (var item in items)
+            await this.ReplaceRootAsync(async r =>
             {
-                await this.AddAsync(item);
-            }
+                foreach (var item in items)
+                {
+                    await this.AddAsync(r, item);
+                }
+            }).ConfigureAwait(false);
         }
 
         public async ValueTask AddAsync<TItem>(TItem item)
         {
-            var options = this.itemTokenizationOptions.Get<TItem>();
-
-            var itemKey = options.KeyReader(item);
-            var itemId = this.idPool.Add(itemKey);
-
-            foreach (var field in options.FieldTokenization)
-            {
-                var (fieldId, tokenizer) = this.FieldLookup.GetFieldInfo(field.Name);
-                var tokens = await field.TokenizeAsync(tokenizer, item);
-
-                foreach (var word in tokens)
-                {
-                    this.Root.Index(itemId, fieldId, word);
-                }
-            }
+            await this.ReplaceRootAsync(async r => await this.AddAsync(r, item))
+                .ConfigureAwait(false);
         }
 
         public bool Remove(TKey itemKey)
@@ -161,6 +143,58 @@ namespace Lifti
         public override string ToString()
         {
             return this.Root.ToString();
+        }
+
+        private void ReplaceRoot(Action<IndexNode> indexMutation)
+        {
+            var newRoot = this.IndexNodeFactory.CloneNode(this.Root);
+            indexMutation(newRoot);
+            this.Root = newRoot;
+        }
+
+        private async Task ReplaceRootAsync(Func<IndexNode, Task> asyncIndexMutation)
+        {
+            var newRoot = this.IndexNodeFactory.CloneNode(this.Root);
+            await asyncIndexMutation(newRoot).ConfigureAwait(false);
+            this.Root = newRoot;
+        }
+
+        private async ValueTask AddAsync<TItem>(IndexNode root, TItem item)
+        {
+            var options = this.itemTokenizationOptions.Get<TItem>();
+
+            var itemKey = options.KeyReader(item);
+            var itemId = this.idPool.Add(itemKey);
+
+            foreach (var field in options.FieldTokenization)
+            {
+                var (fieldId, tokenizer) = this.FieldLookup.GetFieldInfo(field.Name);
+                var tokens = await field.TokenizeAsync(tokenizer, item);
+
+                foreach (var word in tokens)
+                {
+                    root.Index(itemId, fieldId, word);
+                }
+            }
+        }
+
+        private void Add<TItem>(IndexNode root, TItem item)
+        {
+            var options = this.itemTokenizationOptions.Get<TItem>();
+
+            var itemKey = options.KeyReader(item);
+            var itemId = this.idPool.Add(itemKey);
+
+            foreach (var field in options.FieldTokenization)
+            {
+                var (fieldId, tokenizer) = this.FieldLookup.GetFieldInfo(field.Name);
+                var tokens = field.Tokenize(tokenizer, item);
+
+                foreach (var word in tokens)
+                {
+                    root.Index(itemId, fieldId, word);
+                }
+            }
         }
 
         private ITokenizer GetTokenizer(TokenizationOptions tokenizationOptions)
