@@ -30,6 +30,14 @@ namespace PerformanceProfiling
             index.AddRange(WikipediaData.SampleData);
         }
 
+        protected void PopulateIndexOneByOne(LiftiNew.Lifti.IFullTextIndex<string> index)
+        {
+            foreach (var page in WikipediaData.SampleData)
+            {
+                index.Add(page);
+            }
+        }
+
         protected static LiftiNew.Lifti.IFullTextIndex<string> CreateNewIndex(int supportSplitAtIndex)
         {
             return new LiftiNew.Lifti.FullTextIndexBuilder<string>()

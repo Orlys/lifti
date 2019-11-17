@@ -27,7 +27,10 @@ namespace Lifti
                 throw new ArgumentNullException(nameof(original));
             }
 
-            return this.CreateNode(original.IntraNodeText, original.ChildNodes, original.Matches);
+            return this.CreateNode(
+                original.IntraNodeText,
+                original.ChildNodes == null ? null : new Dictionary<char, IndexNode>(original.ChildNodes),
+                original.Matches == null ? null : new Dictionary<int, ImmutableList<IndexedWord>>(original.Matches));
         }
 
         protected override void OnConfiguring(AdvancedOptions options)

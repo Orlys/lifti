@@ -58,10 +58,14 @@ namespace Lifti
             var itemId = this.idPool.Add(itemKey);
 
             var tokenizer = this.GetTokenizer(tokenizationOptions);
-            foreach (var word in tokenizer.Process(text))
+
+            this.ReplaceRoot(r =>
             {
-                this.Root.Index(itemId, this.FieldLookup.DefaultField, word);
-            }
+                foreach (var word in tokenizer.Process(text))
+                {
+                    r.Index(itemId, this.FieldLookup.DefaultField, word);
+                }
+            });
         }
 
         public void Add(TKey itemKey, string text, TokenizationOptions tokenizationOptions = null)
@@ -69,13 +73,14 @@ namespace Lifti
             var itemId = this.idPool.Add(itemKey);
 
             var tokenizer = this.GetTokenizer(tokenizationOptions);
-            var newRoot = this.IndexNodeFactory.CloneNode(this.Root);
-            foreach (var word in tokenizer.Process(text))
-            {
-                newRoot.Index(itemId, this.FieldLookup.DefaultField, word);
-            }
 
-            this.Root = newRoot;
+            this.ReplaceRoot(r =>
+            {
+                foreach (var word in tokenizer.Process(text))
+                {
+                    r.Index(itemId, this.FieldLookup.DefaultField, word);
+                }
+            });
         }
 
         public void AddRange<TItem>(IEnumerable<TItem> items)
